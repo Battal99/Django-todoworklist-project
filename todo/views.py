@@ -7,8 +7,8 @@ from .forms import FormTodo
 from .models import Todo
 from django.utils import timezone
 from django.contrib.auth.decorators import login_required
-
-
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 # Create your views here.
 
 def home(request):
@@ -21,14 +21,17 @@ def signupuser(request):
     else:
         if request.POST['password1'] == request.POST['password2']:
             try:
-                user = User.objects.create_user(request.POST['username'], password=request.POST['password1'])
+                password = validate_password(request.POST['password1'])
+                user = User.objects.create_user(request.POST['username'], password=password)
                 user.save()
                 login(request, user)
                 return redirect('currenttodos')
+            except ValidationError:
+                return render(request, "todo/signupuser.html",
+                              {'form': UserCreationForm(), 'error': 'This password easy'})
             except IntegrityError:
                 return render(request, "todo/signupuser.html",
                               {'form': UserCreationForm(), 'error': 'This user has already exists'})
-
         else:
             return render(request, "todo/signupuser.html",
                           {'form': UserCreationForm(), 'error': 'Password did not match'})
@@ -45,6 +48,7 @@ def loginuser(request):
         else:
             login(request, user)
             return redirect('currenttodos')
+
 
 @login_required
 def logoutuser(request):
